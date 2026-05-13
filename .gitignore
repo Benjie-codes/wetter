@@ -40,3 +40,9 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+# Environment variables — never commit secrets
+.env
+.env.*.local
+# Keep the example template in source control
+!.env.example

@@ -1,0 +1,5 @@
+/* Tailwind CSS v4 — import all layers */
+@import "tailwindcss";
+
+/* Dark mode via .dark class on <html> (equivalent to darkMode: 'class' in v3) */
+@variant dark (&:where(.dark, .dark *));
