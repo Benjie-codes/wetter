@@ -38,6 +38,8 @@ export interface WeatherDataPoint {
   windDirection: number
   condition: WeatherCondition
   location: GeoLocation
+  sunrise: number
+  sunset: number
 }
 
 export interface AirQualityPoint {
@@ -48,6 +50,13 @@ export interface AirQualityPoint {
   pm10: number
   co: number
   status: 'Good' | 'Fair' | 'Moderate' | 'Poor' | 'Hazardous'
+}
+
+/** Current UV index from One Call API (`current.uvi`). */
+export interface UVIndexPoint {
+  timestamp: number
+  /** OpenWeatherMap UV index (typically 0–11+). */
+  uvi: number
 }
 
 // ---------------------------------------------------------------------------

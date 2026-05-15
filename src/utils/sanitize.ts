@@ -1,4 +1,4 @@
-import type { AirQualityPoint, WeatherDataPoint } from '@/types'
+import type { AirQualityPoint, UVIndexPoint, WeatherDataPoint } from '@/types'
 
 /** Epoch ms: reject absurd dates while allowing historical and near-future data */
 const TIMESTAMP_MS_MIN = 0
@@ -87,6 +87,8 @@ export function sanitizeWeatherPoint(raw: unknown): WeatherDataPoint | null {
   const visibility = raw.visibility
   const windSpeed = raw.windSpeed
   const windDirection = raw.windDirection
+  const sunrise = raw.sunrise
+  const sunset = raw.sunset
 
   if (
     !isString(id) ||
@@ -97,7 +99,9 @@ export function sanitizeWeatherPoint(raw: unknown): WeatherDataPoint | null {
     !isFiniteNumber(pressure) ||
     !isFiniteNumber(visibility) ||
     !isFiniteNumber(windSpeed) ||
-    !isFiniteNumber(windDirection)
+    !isFiniteNumber(windDirection) ||
+    !isValidTimestamp(sunrise) ||
+    !isValidTimestamp(sunset)
   ) {
     return null
   }
@@ -108,16 +112,18 @@ export function sanitizeWeatherPoint(raw: unknown): WeatherDataPoint | null {
 
   const point: WeatherDataPoint = {
     id,
-    timestamp,
-    temperature,
-    feelsLike,
-    humidity,
-    pressure,
-    visibility,
-    windSpeed,
-    windDirection,
+    timestamp: timestamp as number,
+    temperature: temperature as number,
+    feelsLike: feelsLike as number,
+    humidity: humidity as number,
+    pressure: pressure as number,
+    visibility: visibility as number,
+    windSpeed: windSpeed as number,
+    windDirection: windDirection as number,
     condition,
     location,
+    sunrise: sunrise as number,
+    sunset: sunset as number,
   }
   return point
 }
@@ -148,12 +154,20 @@ export function sanitizeAirQuality(raw: unknown): AirQualityPoint | null {
   }
 
   const point: AirQualityPoint = {
-    timestamp,
+    timestamp: timestamp as number,
     aqi,
-    pm2_5,
-    pm10,
-    co,
+    pm2_5: pm2_5 as number,
+    pm10: pm10 as number,
+    co: co as number,
     status,
   }
   return point
+}
+
+export function sanitizeUVIndex(raw: unknown): UVIndexPoint | null {
+  if (!isRecord(raw)) return null
+  const timestamp = raw.timestamp
+  const uvi = raw.uvi
+  if (!isValidTimestamp(timestamp) || !isFiniteNumber(uvi) || uvi < 0) return null
+  return { timestamp: timestamp as number, uvi: uvi as number }
 }

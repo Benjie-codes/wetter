@@ -3,6 +3,7 @@ export {
   getCurrentWeather,
   getAirQuality,
   getForecast,
+  getUVIndex,
   searchCities,
   WeatherServiceError,
 } from './openWeatherService'

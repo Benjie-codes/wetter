@@ -10,10 +10,15 @@ export const useUiStore = defineStore('ui', () => {
     isDarkMode.value = !isDarkMode.value
   }
 
+  function setTimeRange(label: string) {
+    activeTimeRange.value = label === 'Live' ? 99999 : parseInt(label) * 60
+  }
+
   return {
     isDarkMode,
     activeTimeRange,
     isPaused,
     toggleDarkMode,
+    setTimeRange,
   }
 })

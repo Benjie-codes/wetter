@@ -79,6 +79,32 @@ export function formatVisibility(metres: number): string {
   return `${Math.round(metres)} m`
 }
 
+const COMPASS_16 = [
+  'N',
+  'NNE',
+  'NE',
+  'ENE',
+  'E',
+  'ESE',
+  'SE',
+  'SSE',
+  'S',
+  'SSW',
+  'SW',
+  'WSW',
+  'W',
+  'WNW',
+  'NW',
+  'NNW',
+] as const
+
+/** Wind direction in degrees (0 = North, clockwise) → 16-point compass label. */
+export function formatWindCompass(degrees: number): string {
+  const d = ((degrees % 360) + 360) % 360
+  const idx = Math.round(d / 22.5) % 16
+  return COMPASS_16[idx] ?? 'N'
+}
+
 function clampAqiIndex(aqi: number): number {
   const rounded = Math.round(aqi)
   return Math.min(5, Math.max(1, rounded))

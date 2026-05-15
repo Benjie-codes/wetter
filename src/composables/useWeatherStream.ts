@@ -8,11 +8,20 @@ import { sanitizeAirQuality, sanitizeWeatherPoint } from '@/utils'
 import { useStreamStore } from '@/stores/streamStore'
 import { useWeatherStore } from '@/stores/weatherStore'
 
+const DEFAULT_LOCATION: GeoLocation = {
+  city: 'Lagos',
+  country: 'NG',
+  lat: 6.5244,
+  lon: 3.3792,
+}
+
 /**
  * REST-backed stream with a WebSocket-shaped API: polling every 20s, reactive connection state,
  * and buffered samples in {@link useWeatherStore}.
+ *
+ * Location is read from {@link useStreamStore}.selectedCity when no `location` argument is passed.
  */
-export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
+export function useWeatherStream(location?: MaybeRefOrGetter<GeoLocation>) {
   const weatherStore = useWeatherStore()
   const streamStore = useStreamStore()
   const { isConnected, isStreaming, reconnectAttempts, lastError, selectedCity } =
@@ -20,6 +29,15 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
 
   const lastUpdated = ref<number | null>(null)
   const isPaused = ref(false)
+
+  function resolveLocation(): GeoLocation {
+    if (location !== undefined) {
+      return { ...toValue(location) }
+    }
+    const s = streamStore.selectedCity
+    if (s) return { ...s }
+    return { ...DEFAULT_LOCATION }
+  }
 
   let pollIntervalId: ReturnType<typeof setInterval> | null = null
   let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null
@@ -55,6 +73,21 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
 
   function scheduleReconnect() {
     clearReconnectTimeout()
+    
+    // Stop after 5 failures
+    if (streamStore.reconnectAttempts >= 5) {
+      weatherStore.addFeedEvent({
+        type: 'error',
+        severity: 'critical',
+        payload: {
+          reason: 'Maximum reconnection attempts reached. Stream stopped.',
+          attempts: streamStore.reconnectAttempts,
+        },
+      })
+      stop()
+      return
+    }
+    
     const delayMs = Math.min(5000 * 2 ** backoffAttempt, 60_000)
     backoffAttempt++
 
@@ -76,7 +109,7 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
   async function executePoll() {
     if (!active || isPaused.value) return
 
-    const loc = toValue(location)
+    const loc = resolveLocation()
     streamStore.selectedCity = { ...loc }
 
     try {
@@ -89,16 +122,37 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
       const weather = sanitizeWeatherPoint(weatherRaw)
       const airQuality = sanitizeAirQuality(airRaw)
 
-      if (!weather || !airQuality) {
+      if (!weather) {
         weatherStore.addFeedEvent({
           type: 'error',
           severity: 'warning',
           payload: {
-            reason: 'malformed_payload',
+            reason: 'Malformed weather payload discarded',
             city: loc.city,
-            dropped: true,
+            timestamp: Date.now(),
           },
         })
+        ensurePollingInterval()
+        return
+      }
+
+      if (!airQuality) {
+        weatherStore.addFeedEvent({
+          type: 'error',
+          severity: 'warning',
+          payload: {
+            reason: 'Malformed air quality payload discarded',
+            city: loc.city,
+            timestamp: Date.now(),
+          },
+        })
+        // Keep last known good data - only update weather
+        weatherStore.bufferDataPoint(weather)
+        lastUpdated.value = Date.now()
+        streamStore.lastError = null
+        streamStore.reconnectAttempts = 0
+        backoffAttempt = 0
+        clearReconnectTimeout()
         ensurePollingInterval()
         return
       }
@@ -131,6 +185,7 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
     active = true
     streamStore.isStreaming = true
     streamStore.isConnected = true
+    streamStore.isStreamPaused = false
     isPaused.value = false
     streamStore.lastError = null
     streamStore.reconnectAttempts = 0
@@ -144,6 +199,7 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
     active = false
     streamStore.isStreaming = false
     streamStore.isConnected = false
+    streamStore.isStreamPaused = false
     isPaused.value = false
     clearAllTimers()
     backoffAttempt = 0
@@ -154,15 +210,23 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
   function pause() {
     if (!active) return
     isPaused.value = true
+    streamStore.isStreamPaused = true
     clearAllTimers()
   }
 
   function resume() {
     if (!active) return
     isPaused.value = false
+    streamStore.isStreamPaused = false
     backoffAttempt = 0
     clearAllTimers()
 
+    void executePoll()
+  }
+
+  function forceRefresh() {
+    if (!active) return
+    clearAllTimers()
     void executePoll()
   }
 
@@ -171,6 +235,7 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
     active = false
     streamStore.isConnected = false
     streamStore.isStreaming = false
+    streamStore.isStreamPaused = false
   })
 
   return {
@@ -185,5 +250,6 @@ export function useWeatherStream(location: MaybeRefOrGetter<GeoLocation>) {
     stop,
     pause,
     resume,
+    forceRefresh,
   }
 }

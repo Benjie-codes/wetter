@@ -57,6 +57,18 @@ export const useWeatherStore = defineStore('weather', () => {
     eventFeed.value = [...eventFeed.value, full].slice(-FEED_MAX)
   }
 
+  const feedCriticalAcknowledgedAt = ref(0)
+
+  const unreadCriticalFeedCount = computed(() =>
+    eventFeed.value.filter(
+      (e) => e.severity === 'critical' && e.timestamp > feedCriticalAcknowledgedAt.value,
+    ).length,
+  )
+
+  function acknowledgeCriticalFeed() {
+    feedCriticalAcknowledgedAt.value = Date.now()
+  }
+
   return {
     current,
     history,
@@ -65,9 +77,11 @@ export const useWeatherStore = defineStore('weather', () => {
     isPaused,
     timeRange,
     filteredHistory,
+    unreadCriticalFeedCount,
     bufferDataPoint,
     setAirQuality,
     scheduleFlush,
     addFeedEvent,
+    acknowledgeCriticalFeed,
   }
 })

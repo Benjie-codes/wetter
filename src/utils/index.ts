@@ -5,6 +5,7 @@ export {
   formatTemperature,
   formatTimestamp,
   formatVisibility,
+  formatWindCompass,
   formatWindSpeed,
   getAQIColor,
   getAQILabel,
@@ -13,5 +14,6 @@ export {
   clampValue,
   isValidTimestamp,
   sanitizeAirQuality,
+  sanitizeUVIndex,
   sanitizeWeatherPoint,
 } from './sanitize'

@@ -13,10 +13,11 @@ import type {
   AirQualityPoint,
   ForecastDay,
   GeoLocation,
+  UVIndexPoint,
   WeatherCondition,
   WeatherDataPoint,
 } from '@/types'
-import { sanitizeAirQuality, sanitizeWeatherPoint } from '@/utils'
+import { sanitizeAirQuality, sanitizeUVIndex, sanitizeWeatherPoint } from '@/utils'
 
 // ---------------------------------------------------------------------------
 // Axios instance
@@ -78,7 +79,7 @@ interface OWMCurrentResponse {
   id: number
   dt: number
   name: string
-  sys: { country: string }
+  sys: { country: string; sunrise: number; sunset: number }
   coord: { lat: number; lon: number }
   main: {
     temp: number
@@ -112,6 +113,13 @@ interface OWMForecastItem {
 
 interface OWMForecastResponse {
   list: OWMForecastItem[]
+}
+
+interface OWMOneCallResponse {
+  current: {
+    dt: number
+    uvi: number
+  }
 }
 
 interface OWMGeoItem {
@@ -208,6 +216,8 @@ export async function getCurrentWeather(lat: number, lon: number): Promise<Weath
         lat: data.coord.lat,
         lon: data.coord.lon,
       },
+      sunrise: data.sys.sunrise * 1000,
+      sunset: data.sys.sunset * 1000,
     }
 
     const validated = sanitizeWeatherPoint(candidate)
@@ -259,6 +269,41 @@ export async function getAirQuality(lat: number, lon: number): Promise<AirQualit
   } catch (err) {
     if (err instanceof WeatherServiceError) throw err
     return handleAxiosError(err, 'getAirQuality')
+  }
+}
+
+/**
+ * Fetches current UV index (One Call API 3.0 `current.uvi`).
+ * Requires an API key with One Call 3.0 access.
+ */
+export async function getUVIndex(lat: number, lon: number): Promise<UVIndexPoint> {
+  try {
+    const { data } = await owmClient.get<OWMOneCallResponse>('/data/3.0/onecall', {
+      params: {
+        lat,
+        lon,
+        exclude: 'minutely,hourly,daily,alerts',
+      },
+    })
+
+    const current = data.current
+    if (!current || typeof current.uvi !== 'number' || !Number.isFinite(current.uvi)) {
+      throw new WeatherServiceError('Missing UV index in One Call response', 'INVALID_RESPONSE')
+    }
+
+    const candidate = {
+      timestamp: current.dt * 1000,
+      uvi: current.uvi,
+    }
+
+    const validated = sanitizeUVIndex(candidate)
+    if (!validated) {
+      throw new WeatherServiceError('UV index response failed validation', 'INVALID_RESPONSE')
+    }
+    return validated
+  } catch (err) {
+    if (err instanceof WeatherServiceError) throw err
+    return handleAxiosError(err, 'getUVIndex')
   }
 }
 
