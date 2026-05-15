@@ -101,11 +101,10 @@ watch(unreadCriticalFeedCount, (count) => {
     </div>
 
     <div
-      ref="feedContainer"
       v-bind="containerProps"
       class="flex-1 overflow-auto rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50"
     >
-      <div v-bind="wrapperProps" class="relative">
+      <div v-bind="wrapperProps" class="relative" ref="feedContainer">
         <TransitionGroup name="feed-item" tag="div" class="space-y-2 p-2">
           <div
             v-for="{ data: event, index } in virtualList"

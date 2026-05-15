@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { shallowRef, watchEffect, onUnmounted, type PropType } from 'vue'
+import { shallowRef, watch, watchEffect, onUnmounted, computed } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import type { EChartsOption } from 'echarts'
 import VChart from 'vue-echarts'
+import { storeToRefs } from 'pinia'
+import { useUiStore } from '@/stores/uiStore'
 
-use([CanvasRenderer]) 
+use([CanvasRenderer])
+
+const uiStore = useUiStore()
+const { isDarkMode } = storeToRefs(uiStore)
 
 const props = defineProps<{
   option: EChartsOption
@@ -14,12 +19,26 @@ const props = defineProps<{
 
 const chartRef = shallowRef<InstanceType<typeof VChart> | null>(null)
 
+// Compute the effective theme based on dark mode
+const effectiveTheme = computed(() => {
+  if (props.theme) return props.theme
+  return isDarkMode.value ? 'dark' : ''
+})
+
+// Watch for dark mode changes and update chart theme
+watch(isDarkMode, () => {
+  if (chartRef.value) {
+    chartRef.value.setOption(props.option, { notMerge: true })
+  }
+})
+
 watchEffect(() => {
   if (chartRef.value) {
     chartRef.value.setOption(props.option, { notMerge: false, lazyUpdate: true })
   }
 })
 
+// CLEANUP: ECharts disposed onUnmounted
 onUnmounted(() => {
   if (chartRef.value) {
     chartRef.value.dispose()
@@ -31,7 +50,7 @@ onUnmounted(() => {
   <VChart
     ref="chartRef"
     :option="option"
-    :theme="theme"
+    :theme="effectiveTheme"
     :init-options="{ renderer: 'canvas' }"
     :autoresize="true"
     class="base-chart"

@@ -45,12 +45,15 @@ const debouncedSearch = useDebounceFn(async (q: string) => {
   }
 }, 300)
 
+function clearSearch() {
+  searchResults.value = []
+  searchLoading.value = false
+}
+
 function handleSearchInput(raw: string) {
   searchQuery.value = raw
   if (!raw.trim()) {
-    debouncedSearch.cancel()
-    searchResults.value = []
-    searchLoading.value = false
+    clearSearch()
     return
   }
   dropdownOpen.value = true
@@ -94,7 +97,7 @@ onClickOutside(mobileSearchRoot, () => {
 })
 
 onUnmounted(() => {
-  debouncedSearch.cancel()
+  clearSearch()
 })
 
 const badgeLabel = computed(() => {
@@ -186,13 +189,28 @@ const badgeLabel = computed(() => {
           :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
           @click="ui.toggleDarkMode()"
         >
-          <FontAwesomeIcon
-            v-if="isDarkMode"
-            :icon="faSun"
-            class="size-5 text-amber-400"
-            aria-hidden="true"
-          />
-          <FontAwesomeIcon v-else :icon="faMoon" class="size-5" aria-hidden="true" />
+          <Transition
+            mode="out-in"
+            enter-active-class="icon-enter-active"
+            enter-from-class="icon-enter-from"
+            leave-active-class="icon-leave-active"
+            leave-to-class="icon-leave-to"
+          >
+            <FontAwesomeIcon
+              v-if="isDarkMode"
+              :key="'sun'"
+              :icon="faSun"
+              class="size-5 text-amber-400"
+              aria-hidden="true"
+            />
+            <FontAwesomeIcon
+              v-else
+              :key="'moon'"
+              :icon="faMoon"
+              class="size-5"
+              aria-hidden="true"
+            />
+          </Transition>
         </button>
 
         <div
@@ -201,7 +219,7 @@ const badgeLabel = computed(() => {
         >
           <span v-if="isLive" class="relative flex size-3 shrink-0">
             <span
-              class="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60"
+              class="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-60 pulse-dot"
               aria-hidden="true"
             />
             <span
@@ -275,3 +293,35 @@ const badgeLabel = computed(() => {
     </div>
   </header>
 </template>
+
+<style scoped>
+.icon-enter-active {
+  transition: opacity 0.2s, transform 0.3s;
+}
+.icon-enter-from {
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+.icon-leave-active {
+  transition: opacity 0.2s, transform 0.3s;
+}
+.icon-leave-to {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.7;
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+</style>

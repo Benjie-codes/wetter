@@ -55,7 +55,7 @@ const subtitleClass = computed(() =>
 
 <template>
   <section
-    class="rounded-2xl p-5 shadow-sm transition-all duration-300"
+    class="rounded-2xl p-5 shadow-sm transition-all duration-300 hover:shadow-md"
     :class="rootClass"
   >
     <header

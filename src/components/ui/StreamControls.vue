@@ -17,7 +17,7 @@ const { isPaused, timeRange } = storeToRefs(weather)
 const { isStreamPaused, selectedCity } = storeToRefs(streamStore)
 
 const weatherStream = useWeatherStream()
-const { lastUpdated, isConnected, isStreaming } = weatherStream
+const { lastUpdated } = weatherStream
 
 const showCityModal = ref(false)
 const citySearchTerm = ref('')
@@ -37,9 +37,6 @@ const currentTimeRange = computed(() => {
   return TIME_RANGES.find((r) => r.minutes === timeRange.value) || TIME_RANGES[4]
 })
 
-const isStreamActive = computed(() => {
-  return isStreaming.value && !isPaused.value && !isStreamPaused.value
-})
 
 async function handleCitySearch() {
   if (!citySearchTerm.value.trim()) {
@@ -50,7 +47,7 @@ async function handleCitySearch() {
   isSearching.value = true
   try {
     citySearchResults.value = await searchCities(citySearchTerm.value)
-  } catch (e) {
+  } catch {
     citySearchResults.value = []
   } finally {
     isSearching.value = false
@@ -131,10 +128,10 @@ onUnmounted(() => {
           :key="range.label"
           type="button"
           @click="setTimeRange(range.minutes, range.label)"
-          class="px-3 py-1 text-sm font-medium rounded-md transition-all duration-200"
+          class="px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ease-in-out"
           :class="currentTimeRange.label === range.label
-            ? 'bg-teal-600 text-white'
-            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            ? 'bg-teal-600 text-white shadow-sm'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'"
         >
           {{ range.label }}
         </button>

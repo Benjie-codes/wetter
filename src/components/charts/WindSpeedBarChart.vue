@@ -44,7 +44,7 @@ const chartOption = computed<EChartsOption>(() => {
   const gridColor = isDark.value ? '#334155' : '#e2e8f0'
 
   // Color bars based on intensity
-  const barColors = windSpeeds.map((speed) => {
+  const barColors: string[] = windSpeeds.map((speed) => {
     if (speed < 20) return isDark.value ? '#22c55e' : '#16a34a' // Green - low
     if (speed < 40) return isDark.value ? '#eab308' : '#ca8a04' // Yellow - moderate
     if (speed < 60) return isDark.value ? '#f97316' : '#ea580c' // Orange - high
@@ -60,7 +60,7 @@ const chartOption = computed<EChartsOption>(() => {
         color: textColor,
       },
       formatter: (params: any) => {
-        const data = params[0]
+        const data = params as { dataIndex: number; axisValue: string; value: number }
         const direction = windDirections[data.dataIndex]
         return `
           <div style="font-weight: 600; margin-bottom: 4px;">${data.axisValue}</div>
@@ -116,7 +116,7 @@ const chartOption = computed<EChartsOption>(() => {
         type: 'bar',
         data: windSpeeds,
         itemStyle: {
-          color: (params: any) => barColors[params.dataIndex],
+          color: (params: any): string => barColors[(params as { dataIndex: number }).dataIndex] ?? '#22c55e',
         },
         markLine: {
           symbol: 'none',
